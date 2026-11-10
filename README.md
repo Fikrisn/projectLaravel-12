@@ -2,6 +2,10 @@
 
 Aplikasi web sederhana untuk mengelola stok barang gudang: daftar barang, pencatatan barang masuk/keluar, dan riwayat mutasi stok. Dibangun dengan Laravel 12, Tailwind CSS 4, Alpine.js, dan MySQL/SQLite.
 
+## Tool AI
+
+Project ini dikembangkan dengan bantuan **OpenCode**, AI coding agent, menggunakan model **Big Pickle**. AI membantu penulisan kode, debugging, test, dan dokumentasi; setiap perubahan tetap diverifikasi dengan test dan peninjauan manual.
+
 ## Fitur
 
 - Daftar barang dengan pencarian langsung (client-side) menggunakan Alpine.js.
@@ -12,6 +16,7 @@ Aplikasi web sederhana untuk mengelola stok barang gudang: daftar barang, pencat
 - Barang keluar ditolak jika jumlahnya melebihi stok tersedia; transaksi dibatalkan dan stok tidak berubah.
 - Riwayat mutasi per barang di halaman detail, lengkap dengan filter rentang tanggal dan pagination.
 - Seeder berisi 5 barang contoh.
+- Seeder opsional berisi 100 data dummy barang.
 
 ## Skema Database
 
@@ -113,5 +118,6 @@ resources/views/items/index.blade.php             # Daftar, pencarian, form tamb
 resources/views/items/show.blade.php              # Detail + riwayat + filter tanggal
 resources/views/components/stock-movement-modal.blade.php
 database/seeders/ItemSeeder.php
+database/seeders/DummyItemSeeder.php
 tests/Feature/StockMovementTest.php
 ```

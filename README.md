@@ -1,59 +1,117 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Stok Gudang
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi web sederhana untuk mengelola stok barang gudang: daftar barang, pencatatan barang masuk/keluar, dan riwayat mutasi stok. Dibangun dengan Laravel 12, Tailwind CSS 4, Alpine.js, dan MySQL/SQLite.
 
-## About Laravel
+## Fitur
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Daftar barang dengan pencarian langsung (client-side) menggunakan Alpine.js.
+- Tambah barang dengan validasi kode wajib & unik, nama wajib, dan satuan wajib.
+- Edit dan hapus barang. Stok tidak bisa diubah langsung, hanya melalui mutasi.
+- Pencatatan barang masuk dan barang keluar melalui modal Alpine.js.
+- Stok bertambah/berkurang otomatis setiap mutasi dicatat.
+- Barang keluar ditolak jika jumlahnya melebihi stok tersedia; transaksi dibatalkan dan stok tidak berubah.
+- Riwayat mutasi per barang di halaman detail, lengkap dengan filter rentang tanggal dan pagination.
+- Seeder berisi 5 barang contoh.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Skema Database
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### `items`
 
-## Learning Laravel
+| Kolom | Tipe | Keterangan |
+| --- | --- | --- |
+| `id` | bigint | Primary key |
+| `kode` | string | Kode barang, unik |
+| `nama` | string | Nama barang |
+| `satuan` | string | Satuan (pcs, rim, box, dll.) |
+| `stok` | unsigned integer | Stok saat ini, default 0 |
+| `created_at`, `updated_at` | timestamp | Waktu dibuat/diubah |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### `stok_movements`
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+| Kolom | Tipe | Keterangan |
+| --- | --- | --- |
+| `id` | bigint | Primary key |
+| `item_id` | foreign key | Relasi ke `items`, cascade delete |
+| `jenis` | enum | `masuk` atau `keluar` |
+| `jumlah` | unsigned integer | Jumlah mutasi, minimal 1 |
+| `keterangan` | string, nullable | Catatan mutasi |
+| `tanggal` | date | Tanggal mutasi |
+| `created_at`, `updated_at` | timestamp | Waktu dicatat |
 
-## Laravel Sponsors
+## Aturan Stok
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- Mutasi disimpan dalam database transaction dengan `lockForUpdate` agar stok tetap konsisten saat ada transaksi bersamaan.
+- Untuk mutasi `keluar`, sistem memeriksa `jumlah > stok`. Jika melebihi, transaksi dibatalkan dengan pesan "Stok tidak mencukupi" dan tidak ada mutasi yang tersimpan.
+- Perubahan stok dan pencatatan mutasi terjadi dalam transaksi yang sama.
+- Menghapus barang akan menghapus seluruh riwayat mutasinya (cascade).
 
-### Premium Partners
+## Route
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+| Method | URI | Keterangan |
+| --- | --- | --- |
+| GET | `/` | Redirect ke daftar barang |
+| GET | `/items` | Daftar barang + form tambah |
+| POST | `/items` | Simpan barang baru |
+| GET | `/items/{item}` | Detail barang + riwayat mutasi |
+| GET | `/items/{item}/edit` | Form edit barang |
+| PUT | `/items/{item}` | Simpan perubahan barang |
+| DELETE | `/items/{item}` | Hapus barang |
+| POST | `/items/{item}/movements` | Catat barang masuk/keluar |
 
-## Contributing
+## Instalasi
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Prasyarat: PHP >= 8.2, Composer, Node.js, dan database MySQL (atau SQLite).
 
-## Code of Conduct
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Sesuaikan koneksi database pada `.env`, lalu:
 
-## Security Vulnerabilities
+```bash
+php artisan migrate --seed
+npm install
+npm run build
+php artisan serve
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Untuk pengembangan dengan hot reload:
 
-## License
+```bash
+npm run dev
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Buka `http://127.0.0.1:8000`.
+
+> Catatan Laragon: jika `php` di terminal masih versi 8.1, gunakan path PHP 8.3 secara eksplisit, misalnya `C:\laragon\bin\php\php-8.3.33-Win32-vs16-x64\php.exe artisan serve`.
+
+## Menjalankan Test
+
+Test menggunakan SQLite in-memory dan `RefreshDatabase`. Pastikan ekstensi `pdo_sqlite` aktif di PHP yang dipakai menjalankan test.
+
+```bash
+php artisan test
+```
+
+Test utama di `tests/Feature/StockMovementTest.php` memverifikasi:
+
+- Barang keluar melebihi stok ditolak, stok tidak berubah, dan tidak ada mutasi tersimpan.
+- Barang masuk menambah stok.
+- Barang keluar valid mengurangi stok.
+- Kode barang duplikat ditolak.
+
+## Struktur Penting
+
+```text
+app/Http/Controllers/ItemController.php           # CRUD barang + riwayat
+app/Http/Controllers/StockMovementController.php  # Pencatatan mutasi + aturan stok
+app/Models/Item.php
+app/Models/StockMovement.php
+resources/views/items/index.blade.php             # Daftar, pencarian, form tambah
+resources/views/items/show.blade.php              # Detail + riwayat + filter tanggal
+resources/views/components/stock-movement-modal.blade.php
+database/seeders/ItemSeeder.php
+tests/Feature/StockMovementTest.php
+```
